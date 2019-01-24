@@ -2,36 +2,32 @@ package com.revature.reduce;
 
 import java.io.IOException;
 
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Reducer;
 
-/**
- * For the combiner example, the MaxReducer will be our last reducing function.
- * 
- * The SumReducer will work as a Combiner, which would be like an intermediate
- * reduce.
- * 
- * This helps us reuse the same code and use it in a different way.
- *
- */
-public class Question1Reducer extends Reducer<Text, IntWritable, Text, IntWritable> {
-
-	public static volatile String CURRENT_MAX_WORD = null;
-	public static volatile int CURRENT_MAX_COUNT = Integer.MIN_VALUE;
+public class Question1Reducer extends Reducer<Text, Text, Text, Text> {
 
 	@Override
-	public void reduce(Text key, Iterable<IntWritable> values, Context context)
-			throws IOException, InterruptedException {
+	public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
 
-		for (IntWritable value : values) {
-			// If the value we are getting is more than our current max, replace it
-			CURRENT_MAX_COUNT = (value.get() > CURRENT_MAX_COUNT) ? value.get() : CURRENT_MAX_COUNT;
-
-			// Set the word string if this was the MAX
-			CURRENT_MAX_WORD = (value.get() == CURRENT_MAX_COUNT) ? key.toString() : CURRENT_MAX_WORD;
+		boolean write = false;
+		int latest_year = Integer.MIN_VALUE;
+		double latest_percent = -1.0D;
+		for (Text value : values) {
+			String[] data = value.toString().split(":");
+			int year = Integer.parseInt(data[0]);
+			double percent = Double.parseDouble(data[1]);
+			if (year >= latest_year && percent < 30.0D) {
+				write = true;
+				latest_year = year;
+				latest_percent = percent;
+			} else if (year < latest_year && percent >= 30.0D) {
+				write = false;
+			}
 		}
 
-		context.write(new Text(CURRENT_MAX_WORD), new IntWritable(CURRENT_MAX_COUNT));
+		if (write) {
+			context.write(key, new Text(latest_year + ": " + latest_percent + "%"));
+		}
 	}
 }

@@ -2,53 +2,44 @@ package com.revature.map;
 
 import java.io.IOException;
 
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 
-/* 
- * To define a map function for your MapReduce job, subclass 
- * the Mapper class and override the map method.
- * The class definition requires four parameters: 
- *   The data type of the input key
- *   The data type of the input value
- *   The data type of the output key (which is the input key type 
- *   for the reducer)
- *   The data type of the output value (which is the input value 
- *   type for the reducer)
+/**
+ * @author Pil Ju Chun
+ *
  */
+public class Question1Mapper extends Mapper<LongWritable, Text, Text, Text> {
 
-public class Question1Mapper extends Mapper<LongWritable, Text, Text, IntWritable> {
-
-	/*
-	 * The map method runs once for each line of text in the input file. The method
-	 * receives a key of type LongWritable, a value of type Text, and a Context
-	 * object.
-	 */
-	@Override
 	public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
 
 		/*
 		 * Convert the line, which is received as a Text object, to a String object.
 		 */
 		String line = value.toString();
+		/*
+		 * Regex checks for "," (quotation mark punctuation included between entries,
+		 * first index entry leading " and last index entry trailing " must be trimmed.
+		 */
+		String[] entries = line.split("\",\"?", -1);
 
 		/*
-		 * The line.split("\\W+") call uses regular expressions to split the line up by
-		 * non-word characters.
-		 * 
-		 * If you are not familiar with the use of regular expressions in Java code,
-		 * search the web for "Java Regex Tutorial."
+		 * Find rows with indicator code "SE.TER.CMPL.FE.ZS", which has the indicator
+		 * name "Tertiary education, gross completion ratio, female (ISCED 5A first
+		 * degree)
 		 */
-		for (String word : line.split("\\W+")) {
-			if (word.length() > 0) {
 
-				/*
-				 * Call the write method on the Context object to emit a key and a value from
-				 * the map method.
-				 */
-				context.write(new Text(word), new IntWritable(1));
+		if (entries[3].equals("SE.TER.CMPL.FE.ZS")) {
+			// Trim leading " punctuation
+			String countryName = entries[0].substring(1);
+			// writes from rightmost column data first and skips country name, country code,
+			// indicator name, and indicator code.
+			for (int i = entries.length - 1; i > 3; i--) {
+				if (!entries[i].equals("")) {
+					// write format is <"countryName", "year - graduate percentage">
+					context.write(new Text(countryName), new Text((1956 + i) + ":" + entries[i]));
+				}
 			}
 		}
 	}
